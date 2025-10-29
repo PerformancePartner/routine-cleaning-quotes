@@ -19,8 +19,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Log incoming request for debugging
-    console.log('Received request:', JSON.stringify(req.body));
+    // Log the FULL incoming request for debugging
+    console.log('Full request body:', JSON.stringify(req.body, null, 2));
+
+    // Extract parameters from Vapi's nested structure
+    let params = req.body;
+    
+    // Vapi sends parameters in: message.toolCalls[0].function.arguments
+    if (req.body.message && req.body.message.toolCalls && req.body.message.toolCalls.length > 0) {
+      params = req.body.message.toolCalls[0].function.arguments;
+      console.log('Extracted from toolCalls:', params);
+    }
 
     const { 
       bedrooms, 
@@ -31,14 +40,27 @@ export default async function handler(req, res) {
       extras = "", 
       furniture_present = false, 
       location 
-    } = req.body;
+    } = params;
+
+    console.log('Final extracted parameters:', {
+      bedrooms,
+      bathrooms,
+      sqft_range,
+      basement,
+      frequency,
+      extras,
+      furniture_present,
+      location
+    });
 
     // Validate required fields
     if (!bedrooms || !bathrooms || !sqft_range || !basement || !frequency || !location) {
+      console.error('Missing required fields');
       return res.status(400).json({
         success: false,
         error: 'Missing required fields',
-        message: 'bedrooms, bathrooms, sqft_range, basement, frequency, and location are required'
+        message: 'bedrooms, bathrooms, sqft_range, basement, frequency, and location are required',
+        received: params
       });
     }
 
@@ -164,26 +186,30 @@ export default async function handler(req, res) {
     let tax = subtotal * 0.11;
     let total = subtotal + tax;
 
+    // Round to 2 decimals
+    const finalSubtotal = Math.round(subtotal * 100) / 100;
+    const finalTax = Math.round(tax * 100) / 100;
+    const finalTotal = Math.round(total * 100) / 100;
+    const finalBase = Math.round(base * 100) / 100;
+    const finalDiscountedBase = Math.round(discountedBase * 100) / 100;
+    const finalExtras = Math.round(totalExtras * 100) / 100;
+
     const response = {
       success: true,
-      subtotal: Math.round(subtotal * 100) / 100,
-      tax: Math.round(tax * 100) / 100,
-      total: Math.round(total * 100) / 100,
-      breakdown: {
-        base: Math.round(base * 100) / 100,
-        discounted_base: Math.round(discountedBase * 100) / 100,
-        extras: Math.round(totalExtras * 100) / 100,
-        travel: travelFee
-      }
+      total: finalTotal,
+      subtotal: finalSubtotal,
+      tax: finalTax,
+      base: finalBase,
+      discounted_base: finalDiscountedBase,
+      extras: finalExtras,
+      travel: travelFee
     };
 
-    // Log response for debugging
-    console.log('Sending response:', JSON.stringify(response));
+    // Log successful calculation
+    console.log('Calculation successful! Returning:', response);
 
-    // Return with Vapi-compatible format
-    return res.status(200).json({
-      results: [response]
-    });
+    // Return simple flat structure
+    return res.status(200).json(response);
     
   } catch (error) {
     console.error('Calculation error:', error);
