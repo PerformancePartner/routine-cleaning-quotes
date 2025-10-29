@@ -208,8 +208,12 @@ export default async function handler(req, res) {
     // Log successful calculation
     console.log('Calculation successful! Returning:', response);
 
-    // Return simple flat structure
-    return res.status(200).json(response);
+    // Try multiple response formats to ensure Vapi compatibility
+    return res.status(200).json({
+      message: JSON.stringify(response),
+      result: response,
+      ...response
+    });
     
   } catch (error) {
     console.error('Calculation error:', error);
