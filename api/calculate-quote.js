@@ -4,11 +4,24 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
+  // Handle OPTIONS preflight request
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  // Only accept POST requests
+  if (req.method !== 'POST') {
+    return res.status(405).json({ 
+      success: false, 
+      error: 'Method not allowed',
+      message: 'Only POST requests are accepted'
+    });
+  }
+
   try {
+    // Log incoming request for debugging
+    console.log('Received request:', JSON.stringify(req.body));
+
     const { 
       bedrooms, 
       bathrooms, 
@@ -19,6 +32,15 @@ export default async function handler(req, res) {
       furniture_present = false, 
       location 
     } = req.body;
+
+    // Validate required fields
+    if (!bedrooms || !bathrooms || !sqft_range || !basement || !frequency || !location) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields',
+        message: 'bedrooms, bathrooms, sqft_range, basement, frequency, and location are required'
+      });
+    }
 
     // Pricing tables
     const sqftPrices = {
@@ -142,7 +164,7 @@ export default async function handler(req, res) {
     let tax = subtotal * 0.11;
     let total = subtotal + tax;
 
-    return res.status(200).json({
+    const response = {
       success: true,
       subtotal: Math.round(subtotal * 100) / 100,
       tax: Math.round(tax * 100) / 100,
@@ -153,12 +175,22 @@ export default async function handler(req, res) {
         extras: Math.round(totalExtras * 100) / 100,
         travel: travelFee
       }
+    };
+
+    // Log response for debugging
+    console.log('Sending response:', JSON.stringify(response));
+
+    // Return with Vapi-compatible format
+    return res.status(200).json({
+      results: [response]
     });
+    
   } catch (error) {
+    console.error('Calculation error:', error);
     return res.status(500).json({ 
       success: false, 
       error: error.message,
-      message: "Calculation failed"
+      message: 'Calculation failed'
     });
   }
 }
