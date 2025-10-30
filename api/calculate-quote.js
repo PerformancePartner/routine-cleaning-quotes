@@ -22,12 +22,16 @@ export default async function handler(req, res) {
     // Log the FULL incoming request for debugging
     console.log('Full request body:', JSON.stringify(req.body, null, 2));
 
-    // Extract parameters from Vapi's nested structure
+    // Extract toolCallId - Vapi needs this in the response
+    let toolCallId = null;
     let params = req.body;
     
-    // Vapi sends parameters in: message.toolCalls[0].function.arguments
+    // Vapi sends parameters in: message.toolCalls[0]
     if (req.body.message && req.body.message.toolCalls && req.body.message.toolCalls.length > 0) {
-      params = req.body.message.toolCalls[0].function.arguments;
+      const toolCall = req.body.message.toolCalls[0];
+      toolCallId = toolCall.id;
+      params = toolCall.function.arguments;
+      console.log('Extracted toolCallId:', toolCallId);
       console.log('Extracted from toolCalls:', params);
     }
 
@@ -57,10 +61,14 @@ export default async function handler(req, res) {
     if (!bedrooms || !bathrooms || !sqft_range || !basement || !frequency || !location) {
       console.error('Missing required fields');
       return res.status(400).json({
-        success: false,
-        error: 'Missing required fields',
-        message: 'bedrooms, bathrooms, sqft_range, basement, frequency, and location are required',
-        received: params
+        results: [{
+          toolCallId: toolCallId,
+          result: JSON.stringify({
+            success: false,
+            error: 'Missing required fields',
+            message: 'bedrooms, bathrooms, sqft_range, basement, frequency, and location are required'
+          })
+        }]
       });
     }
 
@@ -194,16 +202,27 @@ export default async function handler(req, res) {
     const finalDiscountedBase = Math.round(discountedBase * 100) / 100;
     const finalExtras = Math.round(totalExtras * 100) / 100;
 
-    // Create response string - Vapi expects plain text response for function tools
-    const responseText = `Your total is $${finalTotal.toFixed(2)} including tax. This breaks down as: base price $${finalBase.toFixed(2)}, extras $${finalExtras.toFixed(2)}, travel fee $${travelFee.toFixed(2)}, subtotal $${finalSubtotal.toFixed(2)}, plus tax $${finalTax.toFixed(2)}.`;
+    const resultData = {
+      success: true,
+      total: finalTotal,
+      subtotal: finalSubtotal,
+      tax: finalTax,
+      base: finalBase,
+      discounted_base: finalDiscountedBase,
+      extras: finalExtras,
+      travel: travelFee
+    };
 
     // Log successful calculation
-    console.log('Calculation successful! Total:', finalTotal);
-    console.log('Response text:', responseText);
+    console.log('Calculation successful! Returning:', resultData);
 
-    // Return plain text response
-    res.setHeader('Content-Type', 'text/plain');
-    return res.status(200).send(responseText);
+    // Return in Vapi's expected format
+    return res.status(200).json({
+      results: [{
+        toolCallId: toolCallId,
+        result: JSON.stringify(resultData)
+      }]
+    });
     
   } catch (error) {
     console.error('Calculation error:', error);
