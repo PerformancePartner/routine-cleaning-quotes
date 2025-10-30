@@ -194,21 +194,16 @@ export default async function handler(req, res) {
     const finalDiscountedBase = Math.round(discountedBase * 100) / 100;
     const finalExtras = Math.round(totalExtras * 100) / 100;
 
-    const response = {
-      total: finalTotal,
-      subtotal: finalSubtotal,
-      tax: finalTax,
-      base: finalBase,
-      discounted_base: finalDiscountedBase,
-      extras: finalExtras,
-      travel: travelFee
-    };
+    // Create response string - Vapi expects plain text response for function tools
+    const responseText = `Your total is $${finalTotal.toFixed(2)} including tax. This breaks down as: base price $${finalBase.toFixed(2)}, extras $${finalExtras.toFixed(2)}, travel fee $${travelFee.toFixed(2)}, subtotal $${finalSubtotal.toFixed(2)}, plus tax $${finalTax.toFixed(2)}.`;
 
     // Log successful calculation
-    console.log('Calculation successful! Returning:', response);
+    console.log('Calculation successful! Total:', finalTotal);
+    console.log('Response text:', responseText);
 
-    // Return as plain text string for Vapi/OpenAI compatibility
-    return res.status(200).send(JSON.stringify(response));
+    // Return plain text response
+    res.setHeader('Content-Type', 'text/plain');
+    return res.status(200).send(responseText);
     
   } catch (error) {
     console.error('Calculation error:', error);
