@@ -175,6 +175,44 @@ export default async function handler(req, res) {
         else if (sqft_range === "1501-2200") totalExtras += 200.00;
         else totalExtras += 250.00;
       }
+      else if (extra.startsWith("carpet_")) {
+        if (extra.includes("bedroom")) {
+          const match = extra.match(/carpet_(\d+)_bedroom/);
+          if (match) {
+            const count = parseInt(match[1]);
+            totalExtras += count * 75;
+            console.log(`Added carpet for ${count} bedroom(s): $${count * 75}`);
+          }
+        }
+        else if (extra.includes("living_room")) {
+          const match = extra.match(/carpet_(\d+)_living_room/);
+          if (match) {
+            const count = parseInt(match[1]);
+            totalExtras += count * 85;
+            console.log(`Added carpet for ${count} living room(s): $${count * 85}`);
+          }
+        }
+        else if (extra.includes("hallway")) {
+          const match = extra.match(/carpet_(\d+)_hallway/);
+          if (match) {
+            const count = parseInt(match[1]);
+            totalExtras += count * 35;
+            console.log(`Added carpet for ${count} hallway(s): $${count * 35}`);
+          }
+        }
+        else if (extra.includes("staircase")) {
+          const match = extra.match(/carpet_(\d+)_staircase/);
+          if (match) {
+            const count = parseInt(match[1]);
+            totalExtras += count * 45;
+            console.log(`Added carpet for ${count} staircase(s): $${count * 45}`);
+          }
+        }
+      }
+      else if (extra === "stain_removal") {
+        totalExtras += 75;
+        console.log('Added stain removal: $75');
+      }
     });
 
     // Travel fees
